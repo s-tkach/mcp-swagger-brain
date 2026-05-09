@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using SwaggerMcp.Configuration;
 using SwaggerMcp.Embeddings;
@@ -42,8 +43,16 @@ builder.Services.AddSingleton<ISwaggerStore, SqliteSwaggerStore>();
 builder.Services.AddSingleton<SwaggerIndexingService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<SwaggerIndexingService>());
 
+var mcpConfig = builder.Configuration
+    .GetSection(SwaggerMcpOptions.SectionName)
+    .Get<SwaggerMcpOptions>() ?? new SwaggerMcpOptions();
+
 builder.Services
-    .AddMcpServer()
+    .AddMcpServer(options =>
+    {
+        options.ServerInfo = new Implementation { Name = "SwaggerMCP", Version = "1.0" };
+        options.ServerInstructions = mcpConfig.ServerInstructions;
+    })
     .WithStdioServerTransport()
     .WithTools<SwaggerTools>();
 

@@ -18,6 +18,8 @@ public sealed class SwaggerMcpOptions
     public bool RefreshOnStartup { get; init; } = true;
 
     public IReadOnlyList<SwaggerSourceOptions> Sources { get; init; } = [];
+
+    public string? ServerInstructions { get; init; }
 }
 
 public sealed class SwaggerSourceOptions
