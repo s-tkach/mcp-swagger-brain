@@ -129,8 +129,8 @@ public sealed record ApiSummaryDto(
     string Name,
     string? Title,
     string? Version,
-    int EndpointCount,
-    DateTimeOffset? IndexedAt);
+    long EndpointCount,
+    string? IndexedAt);
 
 public sealed record EndpointSummaryDto(
     string Verb,

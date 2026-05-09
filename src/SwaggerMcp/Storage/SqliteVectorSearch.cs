@@ -76,6 +76,7 @@ public sealed class SqliteVectorSearch
             JOIN endpoints e ON e.id = v.rowid
             JOIN apis a ON a.id = e.api_id
             WHERE v.embedding MATCH @Embedding
+              AND k = @Top
               AND (@ApiName IS NULL OR a.name = @ApiName)
               AND (@Verb IS NULL OR e.verb = upper(@Verb))
             ORDER BY v.distance
@@ -165,19 +166,23 @@ public sealed class SqliteVectorSearch
             : dot / (Math.Sqrt(leftLength) * Math.Sqrt(rightLength));
     }
 
-    private sealed record SqliteVecSearchRow(
-        string ApiName,
-        string Verb,
-        string Path,
-        string? Summary,
-        string TagsJson,
-        double Distance);
+    private sealed class SqliteVecSearchRow
+    {
+        public string ApiName { get; init; } = "";
+        public string Verb { get; init; } = "";
+        public string Path { get; init; } = "";
+        public string? Summary { get; init; }
+        public string TagsJson { get; init; } = "[]";
+        public double Distance { get; init; }
+    }
 
-    private sealed record JsonSearchRow(
-        string ApiName,
-        string Verb,
-        string Path,
-        string? Summary,
-        string TagsJson,
-        string EmbeddingJson);
+    private sealed class JsonSearchRow
+    {
+        public string ApiName { get; init; } = "";
+        public string Verb { get; init; } = "";
+        public string Path { get; init; } = "";
+        public string? Summary { get; init; }
+        public string TagsJson { get; init; } = "[]";
+        public string EmbeddingJson { get; init; } = "[]";
+    }
 }

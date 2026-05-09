@@ -8,5 +8,5 @@ public sealed record ApiRecord(
     string? Title,
     string? Version,
     string? SpecHash,
-    DateTimeOffset? IndexedAt,
-    int EndpointCount);
+    string? IndexedAt,
+    long EndpointCount);
