@@ -124,7 +124,7 @@ public sealed class SqliteSwaggerStoreTests
             new SqliteSchemaInitializer(NullLogger<SqliteSchemaInitializer>.Instance),
             new SqliteVectorSearch());
 
-    private static OpenApiChunker CreateChunker() => new(new SchemaSummarizer());
+    private static OpenApiChunker CreateChunker() => new(new SchemaSummarizer(), NullLogger<OpenApiChunker>.Instance);
 
     private static async Task CreateUnavailableVecTableEntryAsync(string databasePath)
     {

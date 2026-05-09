@@ -50,10 +50,11 @@ public sealed class SwaggerTools(
         [Description("Optional API name to limit search.")] string? apiName = null,
         [Description("Optional HTTP verb filter.")] string? verb = null,
         [Description("Maximum number of results.")] int top = 10,
+        [Description("Minimum similarity score between 0 and 1. Results below this threshold are excluded. 0 returns all results.")] double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
         var embedding = await embedder.EmbedAsync(query, cancellationToken);
-        var results = await store.SearchEndpointsAsync(embedding, apiName, verb, top, cancellationToken);
+        var results = await store.SearchEndpointsAsync(embedding, apiName, verb, top, minScore, cancellationToken);
         return results.Select(result => new SearchHitDto(
             result.ApiName,
             result.Verb,
@@ -89,6 +90,18 @@ public sealed class SwaggerTools(
             endpoint.RequestSchemaJson is null ? null : DeserializeJson(endpoint.RequestSchemaJson),
             DeserializeJson(endpoint.ResponsesJson),
             endpoint.SchemaSummary);
+    }
+
+    [McpServerTool(Name = "delete_api")]
+    [Description("Remove a previously indexed API and all its endpoints from the local index. Does not affect the source URL.")]
+    public async Task<object> DeleteApi(
+        [Description("Configured API name to remove.")] string apiName,
+        CancellationToken cancellationToken = default)
+    {
+        var deleted = await store.DeleteApiAsync(apiName, cancellationToken);
+        return deleted
+            ? new { ApiName = apiName, Deleted = true }
+            : new { ApiName = apiName, Deleted = false, Error = $"API '{apiName}' was not found in the index." };
     }
 
     [McpServerTool(Name = "refresh_api")]

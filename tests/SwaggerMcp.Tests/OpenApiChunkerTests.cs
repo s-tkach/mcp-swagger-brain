@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using SwaggerMcp.Indexing;
 using SwaggerMcp.Tests.Fixtures;
 
@@ -66,5 +67,5 @@ public sealed class OpenApiChunkerTests
         Assert.DoesNotContain("path.id:string", endpoint.SchemaSummary);
     }
 
-    private static OpenApiChunker CreateChunker() => new(new SchemaSummarizer());
+    private static OpenApiChunker CreateChunker() => new(new SchemaSummarizer(), NullLogger<OpenApiChunker>.Instance);
 }

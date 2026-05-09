@@ -25,6 +25,7 @@ public interface ISwaggerStore
         string? apiName,
         string? verb,
         int top,
+        double minScore = 0.0,
         CancellationToken cancellationToken = default);
 
     Task<RefreshResult> UpsertDocumentAsync(
@@ -33,4 +34,6 @@ public interface ISwaggerStore
         CancellationToken cancellationToken = default);
 
     Task<string?> GetSpecHashAsync(string apiName, CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteApiAsync(string apiName, CancellationToken cancellationToken = default);
 }

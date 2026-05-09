@@ -12,6 +12,7 @@ using SwaggerMcp.Storage;
 using SwaggerMcp.Tools;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 builder.Configuration.AddCommandLine(args, new Dictionary<string, string>
 {
     ["--appsettings"] = "AppsettingsPath"
@@ -33,7 +34,7 @@ builder.Services
     .ValidateOnStart();
 builder.Services.AddSingleton<IValidateOptions<SwaggerMcpOptions>, SwaggerMcpOptionsValidator>();
 
-builder.Services.AddHttpClient<SwaggerFetcher>();
+builder.Services.AddHttpClient<SwaggerFetcher>(client => client.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddSingleton<SchemaSummarizer>();
 builder.Services.AddSingleton<OpenApiChunker>();
 builder.Services.AddSingleton<IEmbedder, OnnxEmbedder>();
@@ -43,15 +44,13 @@ builder.Services.AddSingleton<ISwaggerStore, SqliteSwaggerStore>();
 builder.Services.AddSingleton<SwaggerIndexingService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<SwaggerIndexingService>());
 
-var mcpConfig = builder.Configuration
-    .GetSection(SwaggerMcpOptions.SectionName)
-    .Get<SwaggerMcpOptions>() ?? new SwaggerMcpOptions();
+var serverInstructions = builder.Configuration[$"{SwaggerMcpOptions.SectionName}:{nameof(SwaggerMcpOptions.ServerInstructions)}"];
 
 builder.Services
     .AddMcpServer(options =>
     {
         options.ServerInfo = new Implementation { Name = "SwaggerMCP", Version = "1.0" };
-        options.ServerInstructions = mcpConfig.ServerInstructions;
+        options.ServerInstructions = serverInstructions;
     })
     .WithStdioServerTransport()
     .WithTools<SwaggerTools>();

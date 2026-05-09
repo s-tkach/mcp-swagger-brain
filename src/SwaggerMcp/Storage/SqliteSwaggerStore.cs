@@ -152,11 +152,12 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
         string? apiName,
         string? verb,
         int top,
+        double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken);
         await using var connection = await OpenConnectionAsync(loadVectorExtension: true, cancellationToken);
-        return await _vectorSearch.SearchAsync(connection, _vectorMode, embedding, apiName, verb, top);
+        return await _vectorSearch.SearchAsync(connection, _vectorMode, embedding, apiName, verb, top, minScore);
     }
 
     public async Task<RefreshResult> UpsertDocumentAsync(
@@ -168,10 +169,10 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
         await using var connection = await OpenConnectionAsync(loadVectorExtension: true, cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        var existing = (await connection.QueryAsync<(string Verb, string Path, string Hash)>(
-            "SELECT verb AS Verb, path AS Path, coalesce(schema_summary, '') AS Hash FROM endpoints WHERE api_id = (SELECT id FROM apis WHERE name = @Name);",
+        var existing = (await connection.QueryAsync<(string Verb, string Path, string CurrentSummary)>(
+            "SELECT verb AS Verb, path AS Path, coalesce(schema_summary, '') AS CurrentSummary FROM endpoints WHERE api_id = (SELECT id FROM apis WHERE name = @Name);",
             new { Name = document.ApiName },
-            transaction)).ToDictionary(row => (row.Verb, row.Path), row => row.Hash);
+            transaction)).ToDictionary(row => (row.Verb, row.Path), row => row.CurrentSummary);
 
         var apiId = await connection.ExecuteScalarAsync<long>("""
             INSERT INTO apis (name, source_url, base_url, title, version, spec_hash, indexed_at)
@@ -316,6 +317,16 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
         return await connection.ExecuteScalarAsync<string?>(
             "SELECT spec_hash FROM apis WHERE name = @ApiName;",
             new { ApiName = apiName });
+    }
+
+    public async Task<bool> DeleteApiAsync(string apiName, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var connection = CreateConnection();
+        var rows = await connection.ExecuteAsync(
+            "DELETE FROM apis WHERE name = @ApiName;",
+            new { ApiName = apiName });
+        return rows > 0;
     }
 
     private SqliteConnection CreateConnection() => new(_connectionString);

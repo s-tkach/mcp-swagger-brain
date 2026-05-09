@@ -21,7 +21,7 @@ public sealed class SqliteVectorSearch
                 DELETE FROM endpoints_vec WHERE rowid = @EndpointId;
                 INSERT INTO endpoints_vec (rowid, embedding)
                 VALUES (@EndpointId, @Embedding);
-                """, new { EndpointId = endpointId, Embedding = SerializeVector(embedding) }, transaction)
+                """, new { EndpointId = endpointId, Embedding = SerializeVector(embedding) }, transaction) // vec0 doesn't support ON CONFLICT, so DELETE + INSERT is required
             : connection.ExecuteAsync($"""
                 INSERT OR REPLACE INTO {SqliteSchemaInitializer.JsonFallbackTableName} (endpoint_id, embedding)
                 VALUES (@EndpointId, @Embedding);
@@ -45,12 +45,16 @@ public sealed class SqliteVectorSearch
         float[] embedding,
         string? apiName,
         string? verb,
-        int top)
+        int top,
+        double minScore = 0.0)
     {
         top = Math.Clamp(top, 1, 25);
-        return mode == SqliteVectorMode.SqliteVec
+        var results = mode == SqliteVectorMode.SqliteVec
             ? await SearchWithSqliteVecAsync(connection, embedding, apiName, verb, top)
             : await SearchWithJsonFallbackAsync(connection, embedding, apiName, verb, top);
+        return minScore > 0.0
+            ? results.Where(r => r.Score >= minScore).ToList()
+            : results;
     }
 
     private static async Task<IReadOnlyList<EndpointSearchResult>> SearchWithSqliteVecAsync(

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
 using SwaggerMcp.Json;
@@ -6,7 +7,7 @@ using SwaggerMcp.Models;
 
 namespace SwaggerMcp.Indexing;
 
-public sealed class OpenApiChunker(SchemaSummarizer schemaSummarizer)
+public sealed class OpenApiChunker(SchemaSummarizer schemaSummarizer, ILogger<OpenApiChunker> logger)
 {
     public EndpointDocument Chunk(string apiName, FetchedSwagger swagger)
     {
@@ -15,6 +16,11 @@ public sealed class OpenApiChunker(SchemaSummarizer schemaSummarizer)
         {
             var errors = string.Join("; ", diagnostic.Errors.Select(error => error.Message));
             throw new InvalidOperationException($"OpenAPI document '{apiName}' has parse errors: {errors}");
+        }
+
+        foreach (var warning in diagnostic.Warnings)
+        {
+            logger.LogWarning("OpenAPI parse warning in '{ApiName}': {Message}", apiName, warning.Message);
         }
 
         var endpoints = new List<EndpointChunk>();
