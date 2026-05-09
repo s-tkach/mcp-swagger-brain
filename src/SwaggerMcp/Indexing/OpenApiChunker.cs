@@ -9,9 +9,11 @@ namespace SwaggerMcp.Indexing;
 
 public sealed class OpenApiChunker(SchemaSummarizer schemaSummarizer, ILogger<OpenApiChunker> logger)
 {
-    public EndpointDocument Chunk(string apiName, FetchedSwagger swagger)
+    public EndpointDocument Chunk(FetchedSwagger swagger)
     {
         var document = new OpenApiStringReader().Read(swagger.Json, out var diagnostic);
+        var apiName = document.Info.Title;
+
         if (diagnostic.Errors.Count > 0)
         {
             var errors = string.Join("; ", diagnostic.Errors.Select(error => error.Message));

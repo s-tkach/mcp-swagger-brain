@@ -21,7 +21,6 @@ public sealed class SqliteSwaggerStoreTests
         var chunker = CreateChunker();
         var embedder = new HashingEmbedder();
         var document = chunker.Chunk(
-            "petstore",
             new FetchedSwagger("https://petstore.local/swagger/v1/swagger.json", PetstoreSwagger.Json, "hash"));
 
         await store.InitializeAsync();
@@ -34,7 +33,7 @@ public sealed class SqliteSwaggerStoreTests
         Assert.True(refresh.Refreshed);
         Assert.Equal(2, refresh.Added);
         var result = Assert.Single(results);
-        Assert.Equal("petstore", result.ApiName);
+        Assert.Equal(document.ApiName, result.ApiName);
         Assert.Equal("POST", result.Verb);
         Assert.Equal("/pets", result.Path);
     }

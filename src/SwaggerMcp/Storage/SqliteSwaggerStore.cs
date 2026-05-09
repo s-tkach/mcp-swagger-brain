@@ -55,6 +55,28 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
         }
     }
 
+    public async Task<ApiRecord?> GetApiAsync(string apiName, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var connection = CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<ApiRecord>("""
+            SELECT
+                a.id AS Id,
+                a.name AS Name,
+                a.source_url AS SourceUrl,
+                a.base_url AS BaseUrl,
+                a.title AS Title,
+                a.version AS Version,
+                a.spec_hash AS SpecHash,
+                a.indexed_at AS IndexedAt,
+                COUNT(e.id) AS EndpointCount
+            FROM apis a
+            LEFT JOIN endpoints e ON e.api_id = a.id
+            WHERE a.name = @ApiName
+            GROUP BY a.id;
+            """, new { ApiName = apiName });
+    }
+
     public async Task<IReadOnlyList<ApiRecord>> ListApisAsync(CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken);

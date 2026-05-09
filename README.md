@@ -14,11 +14,12 @@ The ONNX model is about 90 MB. Local builds download and verify it when missing,
 
 ## Tools
 
-- `list_apis` - list indexed APIs with title, version, endpoint count, and index time.
-- `get_endpoints(apiName, tag?, verb?)` - compact endpoint list for one service.
-- `search_endpoints(query, apiName?, verb?, top?)` - semantic search across endpoint paths, summaries, parameters, and schema summaries.
-- `get_endpoint_details(apiName, verb, path)` - full endpoint details including parameters, request schema, responses, and tags.
-- `refresh_api(apiName?)` - refresh one API, or all configured APIs when omitted.
+- `list_apis` - list indexed APIs with title, version, endpoint count, and last index time.
+- `get_endpoints(apiName, tag?, verb?)` - compact endpoint list for one API, with optional tag and verb filters.
+- `search_endpoints(query, apiName?, verb?, top?, minScore?)` - semantic search across endpoint paths, summaries, parameters, and schema summaries.
+- `get_endpoint_details(apiName, verb, path)` - full endpoint details including parameters, request body schema, responses, and tags.
+- `delete_api(apiName)` - remove a previously indexed API and all its endpoints from the local index.
+- `refresh_api(apiName?)` - re-fetch and re-index one configured API, or all APIs when omitted.
 
 ## Configure Sources
 
@@ -31,9 +32,10 @@ Copy `src/SwaggerMcp/appsettings.example.json` to your own `appsettings.json`, t
     "EmbeddingModelPath": "./models/all-MiniLM-L6-v2.onnx",
     "EmbeddingTokenizerPath": "./models/vocab.txt",
     "RefreshOnStartup": true,
+    "ServerInstructions": "Use this server whenever the user asks about REST API endpoints, HTTP operations, request/response schemas, or how to call a specific API.",
     "Sources": [
-      { "name": "petstore", "url": "https://petstore.swagger.io/v2/swagger.json" },
-      { "name": "fakerestapi", "url": "https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json" }
+      "https://petstore.swagger.io/v2/swagger.json",
+      "https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json"
     ]
   }
 }
@@ -57,7 +59,7 @@ The ONNX model is downloaded during build only when missing, pinned by URL and S
 
 ## Run with Docker Compose
 
-Create `/Users/<your-user>/Documents/swagger-mcp/appsettings.json` (or update the path in `docker-compose.yml`), then run:
+Create `~/Documents/swagger-mcp/appsettings.json` (the `docker-compose.yml` mounts `${HOME}/Documents/swagger-mcp/appsettings.json` by default), then run:
 
 ```bash
 docker compose up -d
@@ -70,6 +72,8 @@ docker compose logs -f swagger-mcp
 docker compose restart swagger-mcp
 docker compose down
 ```
+
+The `data/` directory will be created automatically to store the SQLite database.
 
 ## VS Code Copilot
 
@@ -101,11 +105,11 @@ You can also run directly from source with `dotnet`:
       "args": [
         "run",
         "--project",
-        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj",
-        "--",
-        "--appsettings",
-        "/Users/<your-user>/Documents/swagger-mcp/appsettings.json"
-      ]
+        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj"
+      ],
+      "env": {
+        "SWAGGER_SOURCES": "https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json"
+      }
     }
   }
 }
@@ -121,12 +125,10 @@ To use `sqlite-vec` when running from source, download the matching loadable ext
       "args": [
         "run",
         "--project",
-        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj",
-        "--",
-        "--appsettings",
-        "/Users/<your-user>/Documents/swagger-mcp/appsettings.json"
+        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj"
       ],
       "env": {
+        "SWAGGER_SOURCES": "https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json",
         "SQLITE_VEC_EXTENSION_PATH": "/Users/<your-user>/Documents/swagger-mcp/native/vec0.dylib"
       }
     }
@@ -137,6 +139,8 @@ To use `sqlite-vec` when running from source, download the matching loadable ext
 ## Claude Desktop
 
 Add this server to `claude_desktop_config.json`:
+
+### With Docker
 
 ```json
 {
@@ -154,7 +158,7 @@ Add this server to `claude_desktop_config.json`:
 }
 ```
 
-You can also run directly from source with `dotnet`:
+### With `dotnet run` from source
 
 ```json
 {
@@ -164,11 +168,11 @@ You can also run directly from source with `dotnet`:
       "args": [
         "run",
         "--project",
-        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj",
-        "--",
-        "--appsettings",
-        "/Users/<your-user>/Documents/swagger-mcp/appsettings.json"
-      ]
+        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj"
+      ],
+      "env": {
+        "SWAGGER_SOURCES": "https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json"
+      }
     }
   }
 }
@@ -180,9 +184,10 @@ You can also run directly from source with `dotnet`:
 dotnet restore
 dotnet build
 dotnet test
+
+# Run with SWAGGER_SOURCES env var
+export SWAGGER_SOURCES="https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json"
 dotnet run --project src/SwaggerMcp/SwaggerMcp.csproj
-# override appsettings path
-dotnet run --project src/SwaggerMcp/SwaggerMcp.csproj -- --appsettings /Users/<your-user>/Documents/swagger-mcp/appsettings.json
 ```
 
 The source path examples use the repository directory name `SwaggerMCP`; project and namespace names use `SwaggerMcp`.
@@ -202,4 +207,4 @@ When running from source, `sqlite-vec` is used only when the native extension ca
 
 Large request and response schemas are summarized deterministically before embedding to avoid bloated search records. Full schema details remain available through `get_endpoint_details`.
 
-For every `dotnet run` example with `--appsettings`, `--` is required before `--appsettings` so `dotnet run` stops parsing its own options and forwards the remaining args to the application.
+API names are automatically derived from each OpenAPI document's `info.title` field and slugified (converted to lowercase, with spaces and special characters replaced by hyphens). For example, `"Petstore API v2"` becomes `"petstore-api-v2"`.

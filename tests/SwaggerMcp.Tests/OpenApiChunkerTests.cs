@@ -12,8 +12,9 @@ public sealed class OpenApiChunkerTests
         var chunker = CreateChunker();
         var fetched = new FetchedSwagger("https://petstore.local/swagger/v1/swagger.json", PetstoreSwagger.Json, "hash");
 
-        var document = chunker.Chunk("petstore", fetched);
+        var document = chunker.Chunk(fetched);
 
+        Assert.Equal("petstore", document.ApiName);
         Assert.Equal("Petstore", document.Title);
         Assert.Equal("v1", document.Version);
         Assert.Equal("https://petstore.local", document.BaseUrl);
@@ -28,7 +29,7 @@ public sealed class OpenApiChunkerTests
         var chunker = CreateChunker();
         var fetched = new FetchedSwagger("https://petstore.local/swagger/v1/swagger.json", PetstoreSwagger.Json, "hash");
 
-        var document = chunker.Chunk("petstore", fetched);
+        var document = chunker.Chunk(fetched);
         var post = Assert.Single(document.Endpoints, endpoint => endpoint.Verb == "POST");
 
         Assert.Contains("request:", post.SchemaSummary);
@@ -60,9 +61,10 @@ public sealed class OpenApiChunkerTests
             }
             """, "hash");
 
-        var document = chunker.Chunk("pets", fetched);
+        var document = chunker.Chunk(fetched);
         var endpoint = Assert.Single(document.Endpoints);
 
+        Assert.Equal("pets", document.ApiName);
         Assert.Contains("path.id:integer", endpoint.SchemaSummary);
         Assert.DoesNotContain("path.id:string", endpoint.SchemaSummary);
     }

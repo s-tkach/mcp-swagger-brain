@@ -10,19 +10,26 @@ using SwaggerMcp.Indexing;
 using SwaggerMcp.Storage;
 using SwaggerMcp.Tools;
 
-var appsettingsPath = new ConfigurationBuilder()
-    .AddCommandLine(args, new Dictionary<string, string> { ["--appsettings"] = "AppsettingsPath" })
-    .Build()["AppsettingsPath"];
-
 var builder = Host.CreateApplicationBuilder(args);
 var config = builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-    
-if (appsettingsPath is not null)
-    config.AddJsonFile(appsettingsPath, optional: true);
 
 config.AddEnvironmentVariables();
+
+var rawSources = builder.Configuration["SWAGGER_SOURCES"];
+if (!string.IsNullOrWhiteSpace(rawSources))
+{
+    var existingCount = builder.Configuration
+        .GetSection("SwaggerMcp:Sources").GetChildren().Count();
+    var inMemory = new Dictionary<string, string?>();
+    var urls = rawSources.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    for (var i = 0; i < urls.Length; i++)
+    {
+        inMemory[$"SwaggerMcp:Sources:{existingCount + i}:Url"] = urls[i];
+    }
+    config.AddInMemoryCollection(inMemory);
+}
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 

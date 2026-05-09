@@ -25,17 +25,17 @@ public sealed class SwaggerIndexingService(
             return;
         }
 
-        foreach (var source in options.Value.Sources)
+        foreach (var sourceUrl in options.Value.Sources)
         {
             if (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
 
-            var result = await RefreshAsync(source.Name, stoppingToken);
+            var result = await RefreshSourceUrlAsync(sourceUrl, stoppingToken);
             if (result.Error is not null)
             {
-                logger.LogWarning("Failed to index {ApiName}: {Error}", source.Name, result.Error);
+                logger.LogWarning("Failed to index {Url}: {Error}", sourceUrl, result.Error);
             }
         }
     }
@@ -43,12 +43,12 @@ public sealed class SwaggerIndexingService(
     public async Task<IReadOnlyList<RefreshResult>> RefreshAllAsync(CancellationToken cancellationToken = default)
     {
         using var throttler = new SemaphoreSlim(4);
-        var tasks = options.Value.Sources.Select(async source =>
+        var tasks = options.Value.Sources.Select(async sourceUrl =>
         {
             await throttler.WaitAsync(cancellationToken);
             try
             {
-                return await RefreshAsync(source.Name, cancellationToken);
+                return await RefreshSourceUrlAsync(sourceUrl, cancellationToken);
             }
             finally
             {
@@ -61,24 +61,28 @@ public sealed class SwaggerIndexingService(
 
     public async Task<RefreshResult> RefreshAsync(string apiName, CancellationToken cancellationToken = default)
     {
-        var source = options.Value.Sources.FirstOrDefault(
-            configured => string.Equals(configured.Name, apiName, StringComparison.OrdinalIgnoreCase));
-
-        if (source is null)
+        var api = await store.GetApiAsync(apiName, cancellationToken);
+        if (api is null)
         {
-            return new RefreshResult(apiName, false, 0, 0, 0, $"API source '{apiName}' is not configured.");
+            return new RefreshResult(apiName, false, 0, 0, 0, $"API '{apiName}' is not found.");
         }
 
+        return await RefreshSourceUrlAsync(api.SourceUrl, cancellationToken);
+    }
+
+    private async Task<RefreshResult> RefreshSourceUrlAsync(string sourceUrl, CancellationToken cancellationToken = default)
+    {
         try
         {
-            var fetched = await fetcher.FetchAsync(source.Url, cancellationToken);
-            var existingHash = await store.GetSpecHashAsync(source.Name, cancellationToken);
+            var fetched = await fetcher.FetchAsync(sourceUrl, cancellationToken);
+            var document = chunker.Chunk(fetched);
+
+            var existingHash = await store.GetSpecHashAsync(document.ApiName, cancellationToken);
             if (string.Equals(existingHash, fetched.Hash, StringComparison.Ordinal))
             {
-                return new RefreshResult(source.Name, false, 0, 0, 0, null);
+                return new RefreshResult(document.ApiName, false, 0, 0, 0, null);
             }
 
-            var document = chunker.Chunk(source.Name, fetched);
             var embeddings = new Dictionary<EndpointChunk, float[]>();
             foreach (var endpoint in document.Endpoints)
             {
@@ -89,8 +93,8 @@ public sealed class SwaggerIndexingService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to refresh swagger source {ApiName}", apiName);
-            return new RefreshResult(apiName, false, 0, 0, 0, ex.Message);
+            logger.LogError(ex, "Failed to refresh swagger source {SourceUrl}", sourceUrl);
+            return new RefreshResult(sourceUrl, false, 0, 0, 0, ex.Message);
         }
     }
 }

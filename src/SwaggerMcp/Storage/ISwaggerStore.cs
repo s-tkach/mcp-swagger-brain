@@ -8,6 +8,8 @@ public interface ISwaggerStore
 
     Task<IReadOnlyList<ApiRecord>> ListApisAsync(CancellationToken cancellationToken = default);
 
+    Task<ApiRecord?> GetApiAsync(string apiName, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<EndpointRecord>> GetEndpointsAsync(
         string apiName,
         string? tag,
@@ -36,4 +38,5 @@ public interface ISwaggerStore
     Task<string?> GetSpecHashAsync(string apiName, CancellationToken cancellationToken = default);
 
     Task<bool> DeleteApiAsync(string apiName, CancellationToken cancellationToken = default);
+
 }

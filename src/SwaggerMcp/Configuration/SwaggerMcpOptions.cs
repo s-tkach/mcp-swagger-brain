@@ -17,17 +17,7 @@ public sealed class SwaggerMcpOptions
 
     public bool RefreshOnStartup { get; init; } = true;
 
-    public IReadOnlyList<SwaggerSourceOptions> Sources { get; init; } = [];
+    public IReadOnlyList<string> Sources { get; init; } = [];
 
     public string? ServerInstructions { get; init; }
-}
-
-public sealed class SwaggerSourceOptions
-{
-    [Required]
-    public string Name { get; init; } = string.Empty;
-
-    [Required]
-    [Url]
-    public string Url { get; init; } = string.Empty;
 }

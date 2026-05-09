@@ -8,16 +8,16 @@ public sealed class SwaggerMcpOptionsValidator : IValidateOptions<SwaggerMcpOpti
     {
         var errors = new List<string>();
 
-        var duplicateNames = options.Sources
-            .Where(source => !string.IsNullOrWhiteSpace(source.Name))
-            .GroupBy(source => source.Name, StringComparer.OrdinalIgnoreCase)
+        var duplicateUrls = options.Sources
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .GroupBy(url => url, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .ToList();
 
-        if (duplicateNames.Count > 0)
+        if (duplicateUrls.Count > 0)
         {
-            errors.Add($"SwaggerMcp:Sources contains duplicate API names: {string.Join(", ", duplicateNames)}.");
+            errors.Add($"SwaggerMcp:Sources contains duplicate URLs: {string.Join(", ", duplicateUrls)}.");
         }
 
         return errors.Count == 0

@@ -15,18 +15,18 @@ public sealed class SwaggerMcpOptionsValidatorTests
     }
 
     [Fact]
-    public void Validate_RejectsDuplicateSourceNames()
+    public void Validate_RejectsDuplicateSourceUrls()
     {
         var result = _validator.Validate(null, new SwaggerMcpOptions
         {
             Sources =
             [
-                new SwaggerSourceOptions { Name = "billing", Url = "https://billing.local/swagger.json" },
-                new SwaggerSourceOptions { Name = "BILLING", Url = "https://billing2.local/swagger.json" }
+                "https://billing.local/swagger.json",
+                "https://BILLING.LOCAL/swagger.json"
             ]
         });
 
         Assert.True(result.Failed);
-        Assert.Contains("duplicate API names", string.Join('\n', result.Failures));
+        Assert.Contains("duplicate URLs", string.Join('\n', result.Failures));
     }
 }
