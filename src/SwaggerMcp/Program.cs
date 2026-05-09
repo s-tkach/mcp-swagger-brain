@@ -4,26 +4,25 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 using SwaggerMcp.Configuration;
 using SwaggerMcp.Embeddings;
 using SwaggerMcp.Indexing;
 using SwaggerMcp.Storage;
 using SwaggerMcp.Tools;
 
+var appsettingsPath = new ConfigurationBuilder()
+    .AddCommandLine(args, new Dictionary<string, string> { ["--appsettings"] = "AppsettingsPath" })
+    .Build()["AppsettingsPath"];
+
 var builder = Host.CreateApplicationBuilder(args);
-builder.Configuration.AddEnvironmentVariables();
-builder.Configuration.AddCommandLine(args, new Dictionary<string, string>
-{
-    ["--appsettings"] = "AppsettingsPath"
-});
+var config = builder.Configuration
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+    
+if (appsettingsPath is not null)
+    config.AddJsonFile(appsettingsPath, optional: true);
 
-var appsettingsPath = builder.Configuration["AppsettingsPath"];
-if (!string.IsNullOrWhiteSpace(appsettingsPath))
-{
-    builder.Configuration.AddJsonFile(appsettingsPath, optional: false, reloadOnChange: false);
-}
-
+config.AddEnvironmentVariables();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 
@@ -44,7 +43,11 @@ builder.Services.AddSingleton<ISwaggerStore, SqliteSwaggerStore>();
 builder.Services.AddSingleton<SwaggerIndexingService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<SwaggerIndexingService>());
 
-var serverInstructions = builder.Configuration[$"{SwaggerMcpOptions.SectionName}:{nameof(SwaggerMcpOptions.ServerInstructions)}"];
+var serverInstructions = builder.Configuration.GetSection(SwaggerMcpOptions.SectionName).GetValue<string>(nameof(SwaggerMcpOptions.ServerInstructions));
+if (string.IsNullOrWhiteSpace(serverInstructions))
+{
+    Console.Error.WriteLine($"ServerInstructions are not configured.");
+}
 
 builder.Services
     .AddMcpServer(options =>

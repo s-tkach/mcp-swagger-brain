@@ -44,7 +44,7 @@ public sealed class SwaggerTools(
     }
 
     [McpServerTool(Name = "search_endpoints")]
-    [Description("Semantically search endpoint purpose, path, params, request schema, and response schema across indexed APIs.")]
+    [Description("Use this first when the user asks about any REST API endpoint or HTTP operation. Semantically searches indexed OpenAPI specs by natural-language query across endpoint purpose, path, params, request/response schemas.")]
     public async Task<IReadOnlyList<SearchHitDto>> SearchEndpoints(
         [Description("Natural-language search query, for example 'create invoice' or 'find users by email'.")] string query,
         [Description("Optional API name to limit search.")] string? apiName = null,
