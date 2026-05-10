@@ -207,4 +207,4 @@ When running from source, `sqlite-vec` is used only when the native extension ca
 
 Large request and response schemas are summarized deterministically before embedding to avoid bloated search records. Full schema details remain available through `get_endpoint_details`.
 
-API names are automatically derived from each OpenAPI document's `info.title` field and slugified (converted to lowercase, with spaces and special characters replaced by hyphens). For example, `"Petstore API v2"` becomes `"petstore-api-v2"`.
+API names are taken directly from each OpenAPI document's `info.title` field, preserved as-is.
