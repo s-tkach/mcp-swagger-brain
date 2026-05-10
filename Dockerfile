@@ -3,14 +3,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY SwaggerMcp.sln ./
-COPY src/SwaggerMcp/SwaggerMcp.csproj src/SwaggerMcp/
-COPY tests/SwaggerMcp.Tests/SwaggerMcp.Tests.csproj tests/SwaggerMcp.Tests/
-RUN dotnet restore src/SwaggerMcp/SwaggerMcp.csproj
+COPY McpSwaggerBrain.sln ./
+COPY src/McpSwaggerBrain/McpSwaggerBrain.csproj src/McpSwaggerBrain/
+COPY tests/McpSwaggerBrain.Tests/McpSwaggerBrain.Tests.csproj tests/McpSwaggerBrain.Tests/
+RUN dotnet restore src/McpSwaggerBrain/McpSwaggerBrain.csproj
 
-COPY src/SwaggerMcp src/SwaggerMcp
+COPY src/McpSwaggerBrain src/McpSwaggerBrain
 COPY models models
-RUN dotnet publish src/SwaggerMcp/SwaggerMcp.csproj \
+RUN dotnet publish src/McpSwaggerBrain/McpSwaggerBrain.csproj \
     --configuration Release \
     --no-restore \
     --output /out
@@ -35,4 +35,4 @@ RUN apt-get update \
 COPY --from=build /out ./
 
 ENV SQLITE_VEC_EXTENSION_PATH=/app/vec0.so
-ENTRYPOINT ["dotnet", "SwaggerMcp.dll"]
+ENTRYPOINT ["dotnet", "McpSwaggerBrain.dll"]

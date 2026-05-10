@@ -1,4 +1,4 @@
-# Swagger MCP
+# MCP Swagger Brain
 
 Local MCP server for indexing multiple `/swagger/v1/swagger.json` OpenAPI documents and exposing endpoint discovery tools to VS Code Copilot Chat and Claude Desktop.
 
@@ -10,7 +10,7 @@ The server stores parsed endpoint metadata in SQLite, uses `sqlite-vec` for vect
 - Docker, when running the packaged MCP server.
 - The `all-MiniLM-L6-v2` ONNX model and `vocab.txt` tokenizer under `models/` when running from source.
 
-The ONNX model is about 90 MB. Local builds download and verify it when missing, using the URL and SHA-256 pinned in `src/SwaggerMcp/SwaggerMcp.csproj`. CI or test-only builds that do not need runtime embedding assets can skip that work with `/p:SkipEmbeddingModelDownload=true`.
+The ONNX model is about 90 MB. Local builds download and verify it when missing, using the URL and SHA-256 pinned in `src/McpSwaggerBrain/McpSwaggerBrain.csproj`. CI or test-only builds that do not need runtime embedding assets can skip that work with `/p:SkipEmbeddingModelDownload=true`.
 
 ## Tools
 
@@ -23,12 +23,12 @@ The ONNX model is about 90 MB. Local builds download and verify it when missing,
 
 ## Configure Sources
 
-Copy `src/SwaggerMcp/appsettings.example.json` to your own `appsettings.json`, then edit the source list. When running Docker, mount your config into `/app/appsettings.json`:
+Copy `src/McpSwaggerBrain/appsettings.example.json` to your own `appsettings.json`, then edit the source list. When running Docker, mount your config into `/app/appsettings.json`:
 
 ```json
 {
-  "SwaggerMcp": {
-    "DatabasePath": "./data/swagger-mcp.db",
+  "McpSwaggerBrain": {
+    "DatabasePath": "./data/mcp-swagger-brain.db",
     "EmbeddingModelPath": "./models/all-MiniLM-L6-v2.onnx",
     "EmbeddingTokenizerPath": "./models/vocab.txt",
     "RefreshOnStartup": true,
@@ -46,7 +46,7 @@ Swagger URLs are expected to be reachable without auth from the machine/containe
 ## Build Docker Image
 
 ```bash
-docker build -t swagger-mcp:latest .
+docker build -t mcp-swagger-brain:latest .
 ```
 
 The Docker image includes:
@@ -55,11 +55,11 @@ The Docker image includes:
 - built-in `all-MiniLM-L6-v2` ONNX model and tokenizer
 - `sqlite-vec` loadable extension for the target Docker architecture
 
-The ONNX model is downloaded during build only when missing, pinned by URL and SHA-256 in `src/SwaggerMcp/SwaggerMcp.csproj`, and copied into publish/Docker output. The downloaded `.onnx` file is ignored by git. Runtime startup fails fast if the configured model or tokenizer cannot be loaded.
+The ONNX model is downloaded during build only when missing, pinned by URL and SHA-256 in `src/McpSwaggerBrain/McpSwaggerBrain.csproj`, and copied into publish/Docker output. The downloaded `.onnx` file is ignored by git. Runtime startup fails fast if the configured model or tokenizer cannot be loaded.
 
 ## Run with Docker Compose
 
-Create `~/Documents/swagger-mcp/appsettings.json` (the `docker-compose.yml` mounts `${HOME}/Documents/swagger-mcp/appsettings.json` by default), then run:
+Create `~/Documents/mcp-swagger-brain/appsettings.json` (the `docker-compose.yml` mounts `${HOME}/Documents/mcp-swagger-brain/appsettings.json` by default), then run:
 
 ```bash
 docker compose up -d
@@ -68,8 +68,8 @@ docker compose up -d
 Useful commands:
 
 ```bash
-docker compose logs -f swagger-mcp
-docker compose restart swagger-mcp
+docker compose logs -f mcp-swagger-brain
+docker compose restart mcp-swagger-brain
 docker compose down
 ```
 
@@ -86,9 +86,9 @@ Use a user-level or workspace MCP config:
       "command": "docker",
       "args": [
         "run", "--rm", "-i",
-        "-v", "/Users/<your-user>/Documents/swagger-mcp/appsettings.json:/app/appsettings.json:ro",
-        "-v", "/Users/<your-user>/Documents/swagger-mcp/data:/app/data",
-        "swagger-mcp:latest"
+        "-v", "/Users/<your-user>/Documents/mcp-swagger-brain/appsettings.json:/app/appsettings.json:ro",
+        "-v", "/Users/<your-user>/Documents/mcp-swagger-brain/data:/app/data",
+        "mcp-swagger-brain:latest"
       ]
     }
   }
@@ -105,7 +105,7 @@ You can also run directly from source with `dotnet`:
       "args": [
         "run",
         "--project",
-        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj"
+        "/Users/<your-user>/Source/mcp-swagger-brain/src/McpSwaggerBrain/McpSwaggerBrain.csproj"
       ],
       "env": {
         "SWAGGER_SOURCES": "https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json"
@@ -125,11 +125,11 @@ To use `sqlite-vec` when running from source, download the matching loadable ext
       "args": [
         "run",
         "--project",
-        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj"
+        "/Users/<your-user>/Source/mcp-swagger-brain/src/McpSwaggerBrain/McpSwaggerBrain.csproj"
       ],
       "env": {
         "SWAGGER_SOURCES": "https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json",
-        "SQLITE_VEC_EXTENSION_PATH": "/Users/<your-user>/Documents/swagger-mcp/native/vec0.dylib"
+        "SQLITE_VEC_EXTENSION_PATH": "/Users/<your-user>/Documents/mcp-swagger-brain/native/vec0.dylib"
       }
     }
   }
@@ -149,9 +149,9 @@ Add this server to `claude_desktop_config.json`:
       "command": "docker",
       "args": [
         "run", "--rm", "-i",
-        "-v", "/Users/<your-user>/Documents/swagger-mcp/appsettings.json:/app/appsettings.json:ro",
-        "-v", "/Users/<your-user>/Documents/swagger-mcp/data:/app/data",
-        "swagger-mcp:latest"
+        "-v", "/Users/<your-user>/Documents/mcp-swagger-brain/appsettings.json:/app/appsettings.json:ro",
+        "-v", "/Users/<your-user>/Documents/mcp-swagger-brain/data:/app/data",
+        "mcp-swagger-brain:latest"
       ]
     }
   }
@@ -168,7 +168,7 @@ Add this server to `claude_desktop_config.json`:
       "args": [
         "run",
         "--project",
-        "/Users/<your-user>/Source/SwaggerMCP/src/SwaggerMcp/SwaggerMcp.csproj"
+        "/Users/<your-user>/Source/mcp-swagger-brain/src/McpSwaggerBrain/McpSwaggerBrain.csproj"
       ],
       "env": {
         "SWAGGER_SOURCES": "https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json"
@@ -187,10 +187,10 @@ dotnet test
 
 # Run with SWAGGER_SOURCES env var
 export SWAGGER_SOURCES="https://petstore.swagger.io/v2/swagger.json;https://fakerestapi.azurewebsites.net/swagger/v1/swagger.json"
-dotnet run --project src/SwaggerMcp/SwaggerMcp.csproj
+dotnet run --project src/McpSwaggerBrain/McpSwaggerBrain.csproj
 ```
 
-The source path examples use the repository directory name `SwaggerMCP`; project and namespace names use `SwaggerMcp`.
+The source path examples use the repository directory name `mcp-swagger-brain`; project and namespace names use `McpSwaggerBrain`.
 
 When the MCP client starts the server, logs are written to stderr so stdout remains reserved for MCP stdio messages.
 
