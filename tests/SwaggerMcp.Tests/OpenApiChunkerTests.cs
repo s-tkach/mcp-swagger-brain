@@ -14,7 +14,7 @@ public sealed class OpenApiChunkerTests
 
         var document = chunker.Chunk(fetched);
 
-        Assert.Equal("petstore", document.ApiName);
+        Assert.Equal("Petstore", document.ApiName);
         Assert.Equal("Petstore", document.Title);
         Assert.Equal("v1", document.Version);
         Assert.Equal("https://petstore.local", document.BaseUrl);
@@ -64,7 +64,7 @@ public sealed class OpenApiChunkerTests
         var document = chunker.Chunk(fetched);
         var endpoint = Assert.Single(document.Endpoints);
 
-        Assert.Equal("pets", document.ApiName);
+        Assert.Equal("Pets", document.ApiName);
         Assert.Contains("path.id:integer", endpoint.SchemaSummary);
         Assert.DoesNotContain("path.id:string", endpoint.SchemaSummary);
     }
