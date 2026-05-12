@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using McpSwaggerKnowledge.Configuration;
 using McpSwaggerKnowledge.Embeddings;
 using McpSwaggerKnowledge.Indexing;
@@ -50,19 +51,18 @@ builder.Services.AddSingleton<ISwaggerStore, SqliteSwaggerStore>();
 builder.Services.AddSingleton<SwaggerIndexingService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<SwaggerIndexingService>());
 
-var serverInstructions = builder.Configuration.GetSection(McpSwaggerKnowledgeOptions.SectionName).GetValue<string>(nameof(McpSwaggerKnowledgeOptions.ServerInstructions));
-if (string.IsNullOrWhiteSpace(serverInstructions))
-{
-    Console.Error.WriteLine($"ServerInstructions are not configured.");
-}
-
 builder.Services
     .AddMcpServer(options =>
     {
         options.ServerInfo = new Implementation { Name = "mcp-swagger-knowledge", Version = "1.0" };
-        options.ServerInstructions = serverInstructions;
     })
     .WithStdioServerTransport()
     .WithTools<SwaggerTools>();
+
+builder.Services.AddOptions<McpServerOptions>()
+    .Configure<IOptions<McpSwaggerKnowledgeOptions>>((mcpServerOptions, appOptions) =>
+    {
+        mcpServerOptions.ServerInstructions = appOptions.Value.ServerInstructions;
+    });
 
 await builder.Build().RunAsync();

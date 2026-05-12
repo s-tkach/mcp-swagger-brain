@@ -70,15 +70,13 @@ public sealed class OpenApiChunker(SchemaSummarizer schemaSummarizer, ILogger<Op
         IReadOnlyList<ParameterShape> parameters,
         string schemaSummary)
     {
-        return string.Join('\n', new[]
-        {
-            $"{verb} {path}",
-            operation.OperationId ?? string.Empty,
-            operation.Summary ?? string.Empty,
-            operation.Description ?? string.Empty,
-            operation.Tags.Count > 0 ? $"tags: {string.Join(", ", operation.Tags.Select(tag => tag.Name))}" : string.Empty,
-            parameters.Count > 0 ? $"params: {string.Join(", ", parameters.Select(parameter => parameter.Name))}" : string.Empty,
-            schemaSummary
-        }.Where(part => !string.IsNullOrWhiteSpace(part)));
+        var parts = new List<string>(7) { $"{verb} {path}" };
+        if (!string.IsNullOrWhiteSpace(operation.OperationId)) parts.Add(operation.OperationId);
+        if (!string.IsNullOrWhiteSpace(operation.Summary)) parts.Add(operation.Summary);
+        if (!string.IsNullOrWhiteSpace(operation.Description)) parts.Add(operation.Description);
+        if (operation.Tags.Count > 0) parts.Add($"tags: {string.Join(", ", operation.Tags.Select(tag => tag.Name))}");
+        if (parameters.Count > 0) parts.Add($"params: {string.Join(", ", parameters.Select(parameter => parameter.Name))}");
+        if (!string.IsNullOrWhiteSpace(schemaSummary)) parts.Add(schemaSummary);
+        return string.Join('\n', parts);
     }
 }

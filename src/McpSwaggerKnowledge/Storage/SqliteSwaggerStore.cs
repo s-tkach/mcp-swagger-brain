@@ -342,7 +342,7 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
     public async Task<string?> GetSpecHashAsync(string apiName, CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken);
-        await using var connection = CreateConnection();
+        await using var connection = await OpenConnectionAsync(loadVectorExtension: false, cancellationToken);
         return await connection.ExecuteScalarAsync<string?>(
             "SELECT spec_hash FROM apis WHERE name = @ApiName;",
             new { ApiName = apiName });
@@ -351,7 +351,7 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
     public async Task<bool> DeleteApiAsync(string apiName, CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken);
-        await using var connection = CreateConnection();
+        await using var connection = await OpenConnectionAsync(loadVectorExtension: false, cancellationToken);
         var rows = await connection.ExecuteAsync(
             "DELETE FROM apis WHERE name = @ApiName;",
             new { ApiName = apiName });

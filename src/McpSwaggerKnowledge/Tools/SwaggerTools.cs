@@ -46,7 +46,7 @@ public sealed class SwaggerTools(
             endpoint.Verb,
             endpoint.Path,
             endpoint.Summary,
-            DeserializeTags(endpoint.TagsJson))).ToList();
+            JsonDefaults.DeserializeTags(endpoint.TagsJson))).ToList();
     }
 
     [McpServerTool(Name = "search_endpoints")]
@@ -96,7 +96,7 @@ public sealed class SwaggerTools(
             endpoint.OperationId,
             endpoint.Summary,
             endpoint.Description,
-            DeserializeTags(endpoint.TagsJson),
+            JsonDefaults.DeserializeTags(endpoint.TagsJson),
             DeserializeJson(endpoint.ParametersJson),
             endpoint.RequestSchemaJson is null ? null : DeserializeJson(endpoint.RequestSchemaJson),
             DeserializeJson(endpoint.ResponsesJson),
@@ -105,7 +105,7 @@ public sealed class SwaggerTools(
 
     [McpServerTool(Name = "delete_api")]
     [Description("Remove a previously indexed API and all its endpoints from the local index. Does not affect the source URL.")]
-    public async Task<object> DeleteApi(
+    public async Task<DeleteApiResult> DeleteApi(
         [Description("Configured API name to remove.")] string apiName,
         CancellationToken cancellationToken = default)
     {
@@ -114,11 +114,11 @@ public sealed class SwaggerTools(
         if (deleted)
         {
             logger.LogInformation("Deleted API '{ApiName}' from index.", apiName);
-            return new { ApiName = apiName, Deleted = true };
+            return new DeleteApiResult(apiName, true, null);
         }
 
         logger.LogWarning("delete_api: API '{ApiName}' was not found in the index.", apiName);
-        return new { ApiName = apiName, Deleted = false, Error = $"API '{apiName}' was not found in the index." };
+        return new DeleteApiResult(apiName, false, $"API '{apiName}' was not found in the index.");
     }
 
     [McpServerTool(Name = "refresh_api")]
@@ -135,9 +135,6 @@ public sealed class SwaggerTools(
 
         return await indexingService.RefreshAsync(apiName, cancellationToken);
     }
-
-    private static IReadOnlyList<string> DeserializeTags(string json) =>
-        JsonSerializer.Deserialize<IReadOnlyList<string>>(json, JsonDefaults.Web) ?? [];
 
     private static object? DeserializeJson(string json) =>
         JsonSerializer.Deserialize<object>(json, JsonDefaults.Web);
@@ -163,6 +160,8 @@ public sealed record SearchHitDto(
     string? Summary,
     IReadOnlyList<string> Tags,
     double Score);
+
+public sealed record DeleteApiResult(string ApiName, bool Deleted, string? Error);
 
 public sealed record EndpointDetailsDto(
     string ApiName,

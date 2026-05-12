@@ -120,7 +120,7 @@ public sealed class SqliteSwaggerStoreTests
     private static SqliteSwaggerStore CreateStore(IOptions<McpSwaggerKnowledgeOptions> options) =>
         new(
             options,
-            new SqliteSchemaInitializer(NullLogger<SqliteSchemaInitializer>.Instance),
+            new SqliteSchemaInitializer(new HashingEmbedder(), NullLogger<SqliteSchemaInitializer>.Instance),
             new SqliteVectorSearch(NullLogger<SqliteVectorSearch>.Instance),
             NullLogger<SqliteSwaggerStore>.Instance);
 

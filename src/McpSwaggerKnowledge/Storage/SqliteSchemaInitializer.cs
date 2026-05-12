@@ -2,10 +2,11 @@ using System.Runtime.InteropServices;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using McpSwaggerKnowledge.Embeddings;
 
 namespace McpSwaggerKnowledge.Storage;
 
-public sealed class SqliteSchemaInitializer(ILogger<SqliteSchemaInitializer> logger)
+public sealed class SqliteSchemaInitializer(IEmbedder embedder, ILogger<SqliteSchemaInitializer> logger)
 {
     public const string SqliteVecTableName = "endpoints_vec";
     public const string JsonFallbackTableName = "endpoints_vec_json";
@@ -87,9 +88,9 @@ public sealed class SqliteSchemaInitializer(ILogger<SqliteSchemaInitializer> log
                 await connection.ExecuteAsync($"DROP TABLE {SqliteVecTableName};");
             }
 
-            await connection.ExecuteAsync("""
+            await connection.ExecuteAsync($"""
                 CREATE VIRTUAL TABLE IF NOT EXISTS endpoints_vec USING vec0(
-                  embedding FLOAT[384]
+                  embedding FLOAT[{embedder.Dimensions}]
                 );
                 """);
             return true;

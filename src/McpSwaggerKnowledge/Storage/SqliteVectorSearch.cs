@@ -92,7 +92,7 @@ public sealed class SqliteVectorSearch(ILogger<SqliteVectorSearch> logger)
                 row.Verb,
                 row.Path,
                 row.Summary,
-                DeserializeTags(row.TagsJson),
+                JsonDefaults.DeserializeTags(row.TagsJson),
                 DistanceToCosineScore(row.Distance)))
             .ToList();
     }
@@ -125,7 +125,7 @@ public sealed class SqliteVectorSearch(ILogger<SqliteVectorSearch> logger)
                 row.Verb,
                 row.Path,
                 row.Summary,
-                DeserializeTags(row.TagsJson),
+                JsonDefaults.DeserializeTags(row.TagsJson),
                 CosineSimilarity(embedding, DeserializeVector(row.EmbeddingJson))))
             .OrderByDescending(result => result.Score)
             .Take(top)
@@ -134,9 +134,6 @@ public sealed class SqliteVectorSearch(ILogger<SqliteVectorSearch> logger)
 
     private static string SerializeVector(float[] vector) =>
         JsonSerializer.Serialize(vector, JsonDefaults.Web);
-
-    private static IReadOnlyList<string> DeserializeTags(string json) =>
-        JsonSerializer.Deserialize<IReadOnlyList<string>>(json, JsonDefaults.Web) ?? [];
 
     private static float[] DeserializeVector(string json) =>
         JsonSerializer.Deserialize<float[]>(json, JsonDefaults.Web) ?? [];

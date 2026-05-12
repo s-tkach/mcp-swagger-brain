@@ -9,6 +9,8 @@ namespace McpSwaggerKnowledge.Embeddings;
 
 public sealed class OnnxEmbedder : IEmbedder, IDisposable
 {
+    private const int EmbeddingDimension = 384;
+
     private readonly ILogger<OnnxEmbedder> _logger;
     private readonly InferenceSession _session;
     private readonly BertTokenizer _tokenizer;
@@ -46,7 +48,7 @@ public sealed class OnnxEmbedder : IEmbedder, IDisposable
         }
     }
 
-    public int Dimensions => 384;
+    public int Dimensions => EmbeddingDimension;
 
     public ValueTask<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
     {
@@ -106,13 +108,13 @@ public sealed class OnnxEmbedder : IEmbedder, IDisposable
         {
             2 => CopyPooledVector(tensor, dimensions),
             3 => MeanPool(tensor, tokenCount, dimensions),
-            _ => new float[384]
+            _ => new float[EmbeddingDimension]
         };
     }
 
     private static float[] CopyPooledVector(Tensor<float> tensor, int[] dimensions)
     {
-        var vector = new float[384];
+        var vector = new float[EmbeddingDimension];
         var hidden = Math.Min(vector.Length, dimensions[1]);
         for (var dimension = 0; dimension < hidden; dimension++)
         {
@@ -124,7 +126,7 @@ public sealed class OnnxEmbedder : IEmbedder, IDisposable
 
     private static float[] MeanPool(Tensor<float> tensor, int tokenCount, int[] dimensions)
     {
-        var vector = new float[384];
+        var vector = new float[EmbeddingDimension];
         var hidden = Math.Min(vector.Length, dimensions[2]);
         for (var token = 0; token < tokenCount; token++)
         {

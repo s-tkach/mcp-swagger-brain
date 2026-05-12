@@ -5,6 +5,9 @@ namespace McpSwaggerKnowledge.Indexing;
 
 public sealed class SchemaSummarizer
 {
+    private const int MaxSchemaDepth = 2;
+    private const int MaxPropertiesPerSchema = 40;
+
     public EndpointSchemaSummary Summarize(
         IList<OpenApiParameter>? pathParameters,
         IList<OpenApiParameter>? operationParameters,
@@ -85,13 +88,13 @@ public sealed class SchemaSummarizer
                 SummarizeSchema(schema.Items, depth + 1));
         }
 
-        if (depth >= 2)
+        if (depth >= MaxSchemaDepth)
         {
             return new SchemaShape(type ?? "object", schema.Reference?.Id, [], schema.Required?.ToList() ?? [], null);
         }
 
         var properties = schema.Properties
-            .Take(40)
+            .Take(MaxPropertiesPerSchema)
             .Select(property => new SchemaPropertyShape(
                 property.Key,
                 SummarizeSchema(property.Value, depth + 1).Type,
