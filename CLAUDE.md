@@ -18,10 +18,10 @@ dotnet build /p:SkipEmbeddingModelDownload=true
 dotnet test /p:SkipEmbeddingModelDownload=true
 
 # Run the server locally
-dotnet run --project src/McpSwaggerBrain/McpSwaggerBrain.csproj
+dotnet run --project src/McpSwaggerKnowledge/McpSwaggerKnowledge.csproj
 ```
 
-The ONNX model (`models/all-MiniLM-L6-v2.onnx`, ~90 MB) is downloaded and SHA-256-verified automatically during build when missing. It is git-ignored. The URL and expected hash are pinned in `src/McpSwaggerBrain/McpSwaggerBrain.csproj`.
+The ONNX model (`models/all-MiniLM-L6-v2.onnx`, ~90 MB) is downloaded and SHA-256-verified automatically during build when missing. It is git-ignored. The URL and expected hash are pinned in `src/McpSwaggerKnowledge/McpSwaggerKnowledge.csproj`.
 
 ## Architecture
 
@@ -50,7 +50,7 @@ This is a .NET 10 MCP (Model Context Protocol) server that indexes OpenAPI/Swagg
 
 ### Configuration
 
-All options live under the `McpSwaggerBrain` JSON section (`McpSwaggerBrainOptions`). Configuration is loaded from `appsettings.json`; use `appsettings.example.json` as the template.
+All options live under the `McpSwaggerKnowledge` JSON section (`McpSwaggerKnowledgeOptions`). Configuration is loaded from `appsettings.json`; use `appsettings.example.json` as the template.
 
 ### Schema summarization
 
@@ -58,4 +58,4 @@ All options live under the `McpSwaggerBrain` JSON section (`McpSwaggerBrainOptio
 
 ### Test project
 
-Tests use xunit and live in `tests/McpSwaggerBrain.Tests`. `Fakes/`, `Fixtures/`, and `Support/` hold test infrastructure. Tests that exercise `OnnxEmbedder` or `SqliteSwaggerStore` need the ONNX model present at runtime; skip the download only for unit-only runs.
+Tests use xunit and live in `tests/McpSwaggerKnowledge.Tests`. `Fakes/`, `Fixtures/`, and `Support/` hold test infrastructure. Tests that exercise `OnnxEmbedder` or `SqliteSwaggerStore` need the ONNX model present at runtime; skip the download only for unit-only runs.

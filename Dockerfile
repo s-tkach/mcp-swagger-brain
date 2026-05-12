@@ -3,14 +3,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY McpSwaggerBrain.sln ./
-COPY src/McpSwaggerBrain/McpSwaggerBrain.csproj src/McpSwaggerBrain/
-COPY tests/McpSwaggerBrain.Tests/McpSwaggerBrain.Tests.csproj tests/McpSwaggerBrain.Tests/
-RUN dotnet restore src/McpSwaggerBrain/McpSwaggerBrain.csproj
+COPY McpSwaggerKnowledge.sln ./
+COPY src/McpSwaggerKnowledge/McpSwaggerKnowledge.csproj src/McpSwaggerKnowledge/
+COPY tests/McpSwaggerKnowledge.Tests/McpSwaggerKnowledge.Tests.csproj tests/McpSwaggerKnowledge.Tests/
+RUN dotnet restore src/McpSwaggerKnowledge/McpSwaggerKnowledge.csproj
 
-COPY src/McpSwaggerBrain src/McpSwaggerBrain
+COPY src/McpSwaggerKnowledge src/McpSwaggerKnowledge
 COPY models models
-RUN dotnet publish src/McpSwaggerBrain/McpSwaggerBrain.csproj \
+RUN dotnet publish src/McpSwaggerKnowledge/McpSwaggerKnowledge.csproj \
     --configuration Release \
     --no-restore \
     --output /out
@@ -35,4 +35,4 @@ RUN apt-get update \
 COPY --from=build /out ./
 
 ENV SQLITE_VEC_EXTENSION_PATH=/app/vec0.so
-ENTRYPOINT ["dotnet", "McpSwaggerBrain.dll"]
+ENTRYPOINT ["dotnet", "McpSwaggerKnowledge.dll"]
