@@ -1,4 +1,4 @@
-# MCP Swagger Brain
+# MCP Swagger Knowledge
 
 Local MCP server for indexing multiple `/swagger/v1/swagger.json` OpenAPI documents and exposing endpoint discovery tools to VS Code Copilot Chat and Claude Desktop.
 
