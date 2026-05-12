@@ -26,7 +26,7 @@ if (!string.IsNullOrWhiteSpace(rawSources))
     var urls = rawSources.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     for (var i = 0; i < urls.Length; i++)
     {
-        inMemory[$"McpSwaggerKnowledge:Sources:{existingCount + i}:Url"] = urls[i];
+        inMemory[$"McpSwaggerKnowledge:Sources:{existingCount + i}"] = urls[i];
     }
     config.AddInMemoryCollection(inMemory);
 }
