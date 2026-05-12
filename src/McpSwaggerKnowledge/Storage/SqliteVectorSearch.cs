@@ -2,12 +2,13 @@ using System.Data;
 using System.Text.Json;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using McpSwaggerKnowledge.Json;
 using McpSwaggerKnowledge.Models;
 
 namespace McpSwaggerKnowledge.Storage;
 
-public sealed class SqliteVectorSearch
+public sealed class SqliteVectorSearch(ILogger<SqliteVectorSearch> logger)
 {
     public Task UpsertEmbeddingAsync(
         SqliteConnection connection,
@@ -52,9 +53,11 @@ public sealed class SqliteVectorSearch
         var results = mode == SqliteVectorMode.SqliteVec
             ? await SearchWithSqliteVecAsync(connection, embedding, apiName, verb, top)
             : await SearchWithJsonFallbackAsync(connection, embedding, apiName, verb, top);
-        return minScore > 0.0
-            ? results.Where(r => r.Score >= minScore).ToList()
-            : results;
+        var filtered = minScore > 0.0 ? results.Where(r => r.Score >= minScore).ToList() : results;
+        logger.LogInformation(
+            "Vector search ({Mode}): {Total} candidate(s), {Returned} returned after minScore={MinScore} filter.",
+            mode, results.Count, filtered.Count, minScore);
+        return filtered;
     }
 
     private static async Task<IReadOnlyList<EndpointSearchResult>> SearchWithSqliteVecAsync(

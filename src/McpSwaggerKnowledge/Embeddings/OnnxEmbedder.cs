@@ -38,6 +38,7 @@ public sealed class OnnxEmbedder : IEmbedder, IDisposable
             {
                 LowerCaseBeforeTokenization = true
             });
+            _logger.LogInformation("ONNX embedder initialized (model: {ModelPath}).", modelPath);
         }
         catch (Exception ex)
         {

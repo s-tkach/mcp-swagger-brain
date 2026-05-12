@@ -44,9 +44,19 @@ public sealed class SqliteSchemaInitializer(ILogger<SqliteSchemaInitializer> log
             );
             """);
 
-        return await TryCreateSqliteVecTableAsync(connection)
-            ? SqliteVectorMode.SqliteVec
-            : await CreateJsonFallbackTableAsync(connection);
+        SqliteVectorMode mode;
+        if (await TryCreateSqliteVecTableAsync(connection))
+        {
+            logger.LogInformation("Vector mode: sqlite-vec (extension loaded from '{ExtensionPath}').", _extensionPath);
+            mode = SqliteVectorMode.SqliteVec;
+        }
+        else
+        {
+            mode = await CreateJsonFallbackTableAsync(connection);
+            logger.LogInformation("Vector mode: JSON fallback (in-process cosine similarity).");
+        }
+
+        return mode;
     }
 
     public void LoadVectorExtension(SqliteConnection connection)
@@ -92,7 +102,7 @@ public sealed class SqliteSchemaInitializer(ILogger<SqliteSchemaInitializer> log
         }
     }
 
-    private static async Task<SqliteVectorMode> CreateJsonFallbackTableAsync(SqliteConnection connection)
+    private async Task<SqliteVectorMode> CreateJsonFallbackTableAsync(SqliteConnection connection)
     {
         await connection.ExecuteAsync("""
             CREATE TABLE IF NOT EXISTS endpoints_vec_json (
@@ -105,7 +115,7 @@ public sealed class SqliteSchemaInitializer(ILogger<SqliteSchemaInitializer> log
         return SqliteVectorMode.JsonFallback;
     }
 
-    private static async Task MigrateLegacyJsonFallbackTableAsync(SqliteConnection connection)
+    private async Task MigrateLegacyJsonFallbackTableAsync(SqliteConnection connection)
     {
         var existingSql = await GetTableSqlAsync(connection, SqliteVecTableName);
         if (existingSql is null || existingSql.Contains("USING vec0", StringComparison.OrdinalIgnoreCase))
@@ -113,6 +123,7 @@ public sealed class SqliteSchemaInitializer(ILogger<SqliteSchemaInitializer> log
             return;
         }
 
+        logger.LogInformation("Migrating legacy endpoints_vec table to JSON fallback format.");
         await connection.ExecuteAsync($"""
             INSERT OR IGNORE INTO {JsonFallbackTableName} (endpoint_id, embedding)
             SELECT endpoint_id, embedding

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using McpSwaggerKnowledge.Embeddings;
 using McpSwaggerKnowledge.Indexing;
@@ -12,13 +13,16 @@ namespace McpSwaggerKnowledge.Tools;
 public sealed class SwaggerTools(
     ISwaggerStore store,
     IEmbedder embedder,
-    SwaggerIndexingService indexingService)
+    SwaggerIndexingService indexingService,
+    ILogger<SwaggerTools> logger)
 {
     [McpServerTool(Name = "list_apis")]
     [Description("List configured and indexed APIs with title, version, endpoint count, and last index time.")]
     public async Task<IReadOnlyList<ApiSummaryDto>> ListApis(CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Tool invoked: list_apis");
         var apis = await store.ListApisAsync(cancellationToken);
+        logger.LogInformation("list_apis returned {Count} API(s).", apis.Count);
         return apis.Select(api => new ApiSummaryDto(
             api.Name,
             api.Title,
@@ -35,7 +39,9 @@ public sealed class SwaggerTools(
         [Description("Optional HTTP verb filter, for example GET or POST.")] string? verb = null,
         CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Tool invoked: get_endpoints — api={ApiName}, tag={Tag}, verb={Verb}", apiName, tag, verb);
         var endpoints = await store.GetEndpointsAsync(apiName, tag, verb, cancellationToken);
+        logger.LogInformation("get_endpoints returned {Count} endpoint(s) for '{ApiName}'.", endpoints.Count, apiName);
         return endpoints.Select(endpoint => new EndpointSummaryDto(
             endpoint.Verb,
             endpoint.Path,
@@ -53,8 +59,11 @@ public sealed class SwaggerTools(
         [Description("Minimum similarity score between 0 and 1. Results below this threshold are excluded. 0 returns all results.")] double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Tool invoked: search_endpoints — query='{Query}', api={ApiName}, verb={Verb}, top={Top}, minScore={MinScore}",
+            query, apiName, verb, top, minScore);
         var embedding = await embedder.EmbedAsync(query, cancellationToken);
         var results = await store.SearchEndpointsAsync(embedding, apiName, verb, top, minScore, cancellationToken);
+        logger.LogInformation("search_endpoints returned {Count} hit(s) for query '{Query}'.", results.Count, query);
         return results.Select(result => new SearchHitDto(
             result.ApiName,
             result.Verb,
@@ -72,9 +81,11 @@ public sealed class SwaggerTools(
         [Description("OpenAPI path, for example /invoices/{id}.")] string path,
         CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Tool invoked: get_endpoint_details — api={ApiName}, verb={Verb}, path={Path}", apiName, verb, path);
         var endpoint = await store.GetEndpointDetailsAsync(apiName, verb, path, cancellationToken);
         if (endpoint is null)
         {
+            logger.LogWarning("get_endpoint_details: '{Verb} {Path}' not found in '{ApiName}'.", verb, path, apiName);
             return null;
         }
 
@@ -98,10 +109,16 @@ public sealed class SwaggerTools(
         [Description("Configured API name to remove.")] string apiName,
         CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Tool invoked: delete_api — api={ApiName}", apiName);
         var deleted = await store.DeleteApiAsync(apiName, cancellationToken);
-        return deleted
-            ? new { ApiName = apiName, Deleted = true }
-            : new { ApiName = apiName, Deleted = false, Error = $"API '{apiName}' was not found in the index." };
+        if (deleted)
+        {
+            logger.LogInformation("Deleted API '{ApiName}' from index.", apiName);
+            return new { ApiName = apiName, Deleted = true };
+        }
+
+        logger.LogWarning("delete_api: API '{ApiName}' was not found in the index.", apiName);
+        return new { ApiName = apiName, Deleted = false, Error = $"API '{apiName}' was not found in the index." };
     }
 
     [McpServerTool(Name = "refresh_api")]
@@ -110,6 +127,7 @@ public sealed class SwaggerTools(
         [Description("Optional configured API name. Omit to refresh all APIs.")] string? apiName = null,
         CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Tool invoked: refresh_api — api={ApiName}", apiName ?? "<all>");
         if (string.IsNullOrWhiteSpace(apiName))
         {
             return await indexingService.RefreshAllAsync(cancellationToken);

@@ -22,10 +22,14 @@ public sealed class SwaggerIndexingService(
 
         if (!options.Value.RefreshOnStartup)
         {
+            logger.LogInformation("RefreshOnStartup is disabled; skipping initial indexing.");
             return;
         }
 
-        foreach (var sourceUrl in options.Value.Sources)
+        var sources = options.Value.Sources;
+        logger.LogInformation("Starting initial indexing of {Count} source(s).", sources.Count);
+
+        foreach (var sourceUrl in sources)
         {
             if (stoppingToken.IsCancellationRequested)
             {
@@ -38,12 +42,17 @@ public sealed class SwaggerIndexingService(
                 logger.LogWarning("Failed to index {Url}: {Error}", sourceUrl, result.Error);
             }
         }
+
+        logger.LogInformation("Initial indexing complete.");
     }
 
     public async Task<IReadOnlyList<RefreshResult>> RefreshAllAsync(CancellationToken cancellationToken = default)
     {
+        var sources = options.Value.Sources;
+        logger.LogInformation("Refreshing all {Count} source(s).", sources.Count);
+
         using var throttler = new SemaphoreSlim(4);
-        var tasks = options.Value.Sources.Select(async sourceUrl =>
+        var tasks = sources.Select(async sourceUrl =>
         {
             await throttler.WaitAsync(cancellationToken);
             try
@@ -56,7 +65,10 @@ public sealed class SwaggerIndexingService(
             }
         });
 
-        return await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks);
+        logger.LogInformation("RefreshAll complete: {Succeeded} succeeded, {Failed} failed.",
+            results.Count(r => r.Error is null), results.Count(r => r.Error is not null));
+        return results;
     }
 
     public async Task<RefreshResult> RefreshAsync(string apiName, CancellationToken cancellationToken = default)
@@ -74,22 +86,31 @@ public sealed class SwaggerIndexingService(
     {
         try
         {
+            logger.LogInformation("Fetching {SourceUrl}...", sourceUrl);
             var fetched = await fetcher.FetchAsync(sourceUrl, cancellationToken);
             var document = chunker.Chunk(fetched);
+            logger.LogInformation("Parsed '{ApiName}' — {EndpointCount} endpoint(s), hash {Hash}.",
+                document.ApiName, document.Endpoints.Count, fetched.Hash[..8]);
 
             var existingHash = await store.GetSpecHashAsync(document.ApiName, cancellationToken);
             if (string.Equals(existingHash, fetched.Hash, StringComparison.Ordinal))
             {
+                logger.LogInformation("'{ApiName}' is up-to-date (hash unchanged); skipping re-index.", document.ApiName);
                 return new RefreshResult(document.ApiName, false, 0, 0, 0, null);
             }
 
+            logger.LogInformation("Embedding {Count} endpoint(s) for '{ApiName}'...", document.Endpoints.Count, document.ApiName);
             var embeddings = new Dictionary<EndpointChunk, float[]>();
             foreach (var endpoint in document.Endpoints)
             {
                 embeddings[endpoint] = await embedder.EmbedAsync(endpoint.EmbeddingText, cancellationToken);
             }
 
-            return await store.UpsertDocumentAsync(document, embeddings, cancellationToken);
+            var result = await store.UpsertDocumentAsync(document, embeddings, cancellationToken);
+            logger.LogInformation(
+                "Indexed '{ApiName}': +{Added} added, ~{Changed} changed, -{Removed} removed.",
+                result.ApiName, result.Added, result.Changed, result.Removed);
+            return result;
         }
         catch (Exception ex)
         {

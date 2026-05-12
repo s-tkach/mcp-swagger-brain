@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using McpSwaggerKnowledge.Configuration;
 using McpSwaggerKnowledge.Json;
@@ -13,6 +14,7 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
     private readonly string _connectionString;
     private readonly SqliteSchemaInitializer _schemaInitializer;
     private readonly SqliteVectorSearch _vectorSearch;
+    private readonly ILogger<SqliteSwaggerStore> _logger;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _initialized;
     private SqliteVectorMode _vectorMode = SqliteVectorMode.JsonFallback;
@@ -20,13 +22,16 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
     public SqliteSwaggerStore(
         IOptions<McpSwaggerKnowledgeOptions> options,
         SqliteSchemaInitializer schemaInitializer,
-        SqliteVectorSearch vectorSearch)
+        SqliteVectorSearch vectorSearch,
+        ILogger<SqliteSwaggerStore> logger)
     {
         var databasePath = Path.GetFullPath(options.Value.DatabasePath);
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
         _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString();
         _schemaInitializer = schemaInitializer;
         _vectorSearch = vectorSearch;
+        _logger = logger;
+        _logger.LogInformation("SQLite database: {DatabasePath}", databasePath);
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
@@ -44,10 +49,12 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
                 return;
             }
 
+            _logger.LogInformation("Initializing SQLite schema...");
             await using var connection = CreateConnection();
             await connection.OpenAsync(cancellationToken);
             _vectorMode = await _schemaInitializer.InitializeAsync(connection);
             _initialized = true;
+            _logger.LogInformation("SQLite schema initialized.");
         }
         finally
         {
@@ -348,6 +355,14 @@ public sealed class SqliteSwaggerStore : ISwaggerStore
         var rows = await connection.ExecuteAsync(
             "DELETE FROM apis WHERE name = @ApiName;",
             new { ApiName = apiName });
+        if (rows > 0)
+        {
+            _logger.LogInformation("Deleted API '{ApiName}' from store.", apiName);
+        }
+        else
+        {
+            _logger.LogWarning("Delete requested for '{ApiName}' but it was not found in store.", apiName);
+        }
         return rows > 0;
     }
 
